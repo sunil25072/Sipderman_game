@@ -94,45 +94,35 @@ level_dialogues = {
 
 # Load Assets
 try:
-    asset_dir = os.path.dirname(os.path.abspath(__file__))
-    
-    player_stand_img = pygame.image.load(os.path.join(asset_dir, 'standing.png')).convert_alpha()
+    player_stand_img = pygame.image.load('standing.png').convert_alpha()
     player_stand_img = pygame.transform.scale(player_stand_img, (40, 40))
     player_stand_img_left = pygame.transform.flip(player_stand_img, True, False)
     
-    player_run_img = pygame.image.load(os.path.join(asset_dir, 'running.png')).convert_alpha()
+    player_run_img = pygame.image.load('running.png').convert_alpha()
     player_run_img = pygame.transform.scale(player_run_img, (40, 40))
     player_run_img_left = pygame.transform.flip(player_run_img, True, False)
     
-    enemy_img = pygame.image.load(os.path.join(asset_dir, 'enemy.png')).convert_alpha()
+    enemy_img = pygame.image.load('enemy.png').convert_alpha()
     enemy_img = pygame.transform.scale(enemy_img, (40, 40))
     
-    spike_img = pygame.image.load(os.path.join(asset_dir, 'struggle.png')).convert_alpha()
+    spike_img = pygame.image.load('struggle.png').convert_alpha()
     spike_img = pygame.transform.scale(spike_img, (40, 40))
-    
-    # Background Image
-    bg_path = os.path.join(asset_dir, 'city_bg_1785910449760.jpg')
-    if os.path.exists(bg_path):
-        bg_img = pygame.image.load(bg_path).convert()
-        bg_width = int(HEIGHT * (16 / 9))
-        bg_img = pygame.transform.scale(bg_img, (bg_width, HEIGHT))
 
     # NPC Images
     npc_images = {}
     for i in range(1, 11):
         filename = f"NPC_{i}.png"
-        filepath = os.path.join(asset_dir, filename)
-        if os.path.exists(filepath):
-            img = pygame.image.load(filepath).convert_alpha()
+        try:
+            img = pygame.image.load(filename).convert_alpha()
             img = pygame.transform.scale(img, (40, 40))
             npc_images[i] = img
-        else:
+        except:
             img = pygame.Surface((40, 40))
             img.fill((255, 255, 0))
             npc_images[i] = img
             
     # Restart Icon
-    restart_icon_img = pygame.image.load(os.path.join(asset_dir, 'Restart.png')).convert_alpha()
+    restart_icon_img = pygame.image.load('Restart.png').convert_alpha()
     restart_icon_img = pygame.transform.scale(restart_icon_img, (40, 40))
 
 except Exception as e:
@@ -152,7 +142,6 @@ except Exception as e:
     restart_icon_img.fill((255, 0, 0))
     bubble_img = pygame.Surface((WIDTH - 100, 150))
     bubble_img.fill((255, 255, 255))
-
 class Player:
     def __init__(self, x, y):
         self.rect = pygame.Rect(x, y, 40, 40)
