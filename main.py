@@ -94,8 +94,7 @@ level_dialogues = {
 
 # Load Assets
 try:
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    asset_dir = os.path.join(os.path.dirname(base_dir), 'Asset')
+    asset_dir = os.path.dirname(os.path.abspath(__file__))
     
     player_stand_img = pygame.image.load(os.path.join(asset_dir, 'standing.png')).convert_alpha()
     player_stand_img = pygame.transform.scale(player_stand_img, (40, 40))
@@ -112,11 +111,10 @@ try:
     spike_img = pygame.transform.scale(spike_img, (40, 40))
     
     # Background Image
-    bg_path = os.path.join(os.path.dirname(base_dir), 'city_bg_1785910449760.jpg')
-    # Use a fallback color if the background isn't found (which it won't be on the web unless copied over)
+    bg_path = os.path.join(asset_dir, 'city_bg_1785910449760.jpg')
     if os.path.exists(bg_path):
         bg_img = pygame.image.load(bg_path).convert()
-        bg_width = int(HEIGHT * (16 / 9)) # Preserve 16:9 aspect ratio
+        bg_width = int(HEIGHT * (16 / 9))
         bg_img = pygame.transform.scale(bg_img, (bg_width, HEIGHT))
 
     # NPC Images
@@ -129,7 +127,6 @@ try:
             img = pygame.transform.scale(img, (40, 40))
             npc_images[i] = img
         else:
-            print(f"Warning: Could not find {filename}")
             img = pygame.Surface((40, 40))
             img.fill((255, 255, 0))
             npc_images[i] = img
