@@ -138,7 +138,7 @@ except Exception as e:
     spike_img = pygame.Surface((40, 40))
     spike_img.fill((128, 128, 128))
         # Background Image
-    bg_img = pygame.image.load('bg.jpg').convert()
+    bg_img = pygame.image.load('city.jpg').convert()
     bg_width = int(HEIGHT * (16 / 9))
     bg_img = pygame.transform.scale(bg_img, (bg_width, HEIGHT))
     npc_images = {i: pygame.Surface((40, 40)) for i in range(1, 11)}
