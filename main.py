@@ -4,7 +4,7 @@ import os
 
 pygame.init()
 
-WIDTH, HEIGHT = 1200, 720
+WIDTH, HEIGHT = 1920, 825
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Mario-style Platformer")
 clock = pygame.time.Clock()
