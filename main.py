@@ -4,8 +4,6 @@ import os
 
 pygame.init()
 
-# Initial screen setup - We use RESIZABLE so the user can rotate their phone or resize the browser.
-# 800x600 is just a temporary fallback; PyGbag will automatically override this to the browser's true size.
 WIDTH, HEIGHT = 800, 600
 screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
 pygame.display.set_caption("Mario-style Platformer")
@@ -110,10 +108,8 @@ try:
     spike_img = pygame.image.load('struggle.png').convert_alpha()
     spike_img = pygame.transform.scale(spike_img, (40, 40))
 
-    # We keep the raw original background image to scale it later if screen rotates
     bg_img_original = pygame.image.load('city.jpg').convert()
 
-    # NPC Images
     npc_images = {}
     for i in range(1, 11):
         filename = f"NPC_{i}.png"
@@ -126,7 +122,6 @@ try:
             img.fill((255, 255, 0))
             npc_images[i] = img
             
-    # Restart Icon
     restart_icon_img = pygame.image.load('Restart.png').convert_alpha()
     restart_icon_img = pygame.transform.scale(restart_icon_img, (40, 40))
 
@@ -157,7 +152,6 @@ class Player:
         self.is_running = False
 
     def update(self, keys, platforms, t_left=False, t_right=False, t_jump=False):
-        # --- Horizontal movement ---
         self.vel_x = 0
         self.is_running = False
         if keys[pygame.K_LEFT] or t_left:
@@ -169,47 +163,38 @@ class Player:
             self.facing_right = True
             self.is_running = True
 
-        # Apply horizontal movement
         self.rect.x += self.vel_x
         
-        # Horizontal collision
         for platform in platforms:
             if self.rect.colliderect(platform.rect):
-                if self.vel_x > 0: # Moving right
+                if self.vel_x > 0:
                     self.rect.right = platform.rect.left
-                elif self.vel_x < 0: # Moving left
+                elif self.vel_x < 0:
                     self.rect.left = platform.rect.right
 
-        # --- Vertical movement ---
-        # Jumping
         if (keys[pygame.K_SPACE] or keys[pygame.K_UP] or t_jump) and self.is_grounded:
             self.vel_y = JUMP_STRENGTH
             self.is_grounded = False
 
-        # Apply gravity
         self.vel_y += GRAVITY
         if self.vel_y > MAX_FALL_SPEED:
             self.vel_y = MAX_FALL_SPEED
 
-        # Apply vertical movement
         self.rect.y += self.vel_y
-
         self.is_grounded = False
         
-        # Vertical collision
         for platform in platforms:
             if self.rect.colliderect(platform.rect):
-                if self.vel_y > 0: # Falling down
+                if self.vel_y > 0:
                     self.rect.bottom = platform.rect.top
                     self.vel_y = 0
                     self.is_grounded = True
-                elif self.vel_y < 0: # Moving up (hitting ceiling)
+                elif self.vel_y < 0:
                     self.rect.top = platform.rect.bottom
                     self.vel_y = 0
 
-        # Die if fall out of map
         if self.rect.y > HEIGHT + 100:
-            return True # Indicates death
+            return True
         return False
 
     def draw(self, surface, camera_x):
@@ -293,8 +278,8 @@ def load_level(level_number):
     enemies = []
     spikes = []
     
-    # Procedural level generation based on difficulty
-    level_width = 1000 + (level_number * 500)
+    # Ensure the level is always significantly larger than the screen WIDTH!
+    level_width = max(WIDTH * 2, 1000 + (level_number * 500))
     
     x = 0
     while x < level_width - 400:
@@ -303,7 +288,6 @@ def load_level(level_number):
         
         platforms.append(Platform(x, HEIGHT - 40, segment_width, 40))
         
-        # Add obstacles
         if level_number >= 2 and x > 200:
             spikes.append(Spike(x + segment_width//2, HEIGHT - 80))
             
@@ -313,31 +297,43 @@ def load_level(level_number):
             
         x += segment_width + gap_width
         
-    # Final safe platform for NPC
     platforms.append(Platform(level_width - 300, HEIGHT - 40, 500, 40))
-    
-    # A tall, thick wall at the very end to block the player from passing through
     platforms.append(Platform(level_width, 0, 200, HEIGHT))
     
-    # Place NPC at the end
     npc = NPC(level_width - 100, HEIGHT - 80, npc_images[level_number])
     
     return player, platforms, enemies, spikes, npc
 
+def calculate_resolution(window_w, window_h):
+    """Calculates optimal internal resolution based on device orientation."""
+    if window_w > 0 and window_h > 0:
+        aspect_ratio = window_w / window_h
+        if aspect_ratio < 1.0:
+            # Portrait (Mobile) - Fix WIDTH so buttons don't overlap, expand HEIGHT
+            optimal_w = 800
+            optimal_h = int(optimal_w / aspect_ratio)
+        else:
+            # Landscape (Laptop) - Fix HEIGHT to keep platforming classic, expand WIDTH
+            optimal_h = 600
+            optimal_w = int(optimal_h * aspect_ratio)
+        return optimal_w, optimal_h
+    return 800, 600
+
 def update_ui_positions():
-    """Recalculates the positions of UI elements when the screen size changes."""
+    """Recalculates the positions of UI elements and background scale when screen size changes."""
     global restart_button_rect, btn_left, btn_right, btn_jump, bg_img, bg_width
     restart_button_rect = pygame.Rect(WIDTH - 50, 10, 40, 40)
 
-    # Touch Controls Rectangles (dynamically placed at bottom based on HEIGHT/WIDTH)
     btn_left = pygame.Rect(20, HEIGHT - 100, 80, 80)
     btn_right = pygame.Rect(120, HEIGHT - 100, 80, 80)
     btn_jump = pygame.Rect(WIDTH - 120, HEIGHT - 100, 100, 80)
 
-    # Scale Background safely
+    # Scale Background perfectly to COVER the screen (no black/brown bars!)
     if bg_img_original is not None:
-        bg_width = int(HEIGHT * (16 / 9))
-        bg_img = pygame.transform.scale(bg_img_original, (bg_width, HEIGHT))
+        scale = max(WIDTH / bg_img_original.get_width(), HEIGHT / bg_img_original.get_height())
+        bg_width = int(bg_img_original.get_width() * scale)
+        bg_height = int(bg_img_original.get_height() * scale)
+        bg_img = pygame.transform.scale(bg_img_original, (bg_width, bg_height))
     else:
         bg_img = None
         bg_width = WIDTH
@@ -345,11 +341,10 @@ def update_ui_positions():
 async def main():
     global WIDTH, HEIGHT, screen, current_level, player, platforms, enemies, spikes, npc, camera_x, game_over, game_won, dialogue_active, dialogue_index, enter_pressed
 
-    # Fetch initial screen size in PyGbag (if available) to adapt to mobile immediately
+    # 1. Dynamically adapt to Laptop vs Mobile right at startup!
     info = pygame.display.Info()
-    if info.current_w > 0 and info.current_h > 0:
-        WIDTH, HEIGHT = info.current_w, info.current_h
-        screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
+    WIDTH, HEIGHT = calculate_resolution(info.current_w, info.current_h)
+    screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
 
     update_ui_positions()
 
@@ -362,8 +357,6 @@ async def main():
     dialogue_active = False
     dialogue_index = 0
     enter_pressed = False 
-
-    # Dictionary to track multiple simultaneous touch inputs
     active_touches = {} 
 
     running = True
@@ -374,11 +367,9 @@ async def main():
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.VIDEORESIZE:
-                # Handle rotation / resizing
-                WIDTH, HEIGHT = event.w, event.h
+                WIDTH, HEIGHT = calculate_resolution(event.w, event.h)
                 screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
                 update_ui_positions()
-                # Reload level to snap the ground to the new screen height
                 player, platforms, enemies, spikes, npc = load_level(current_level)
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1 and restart_button_rect.collidepoint(event.pos):
@@ -386,10 +377,7 @@ async def main():
                     game_over = False
                     dialogue_active = False
                     game_won = False
-                    
-            # MULTI-TOUCH EVENTS (Tracks an unlimited number of fingers)
             elif event.type == pygame.FINGERDOWN or event.type == pygame.FINGERMOTION:
-                # FINGER events return normalized values (0.0 to 1.0), so we multiply by screen dimensions
                 tx = event.x * WIDTH
                 ty = event.y * HEIGHT
                 active_touches[event.finger_id] = (tx, ty)
@@ -399,7 +387,6 @@ async def main():
 
         keys = pygame.key.get_pressed()
         
-        # Evaluate Touch Buttons (supports holding multiple buttons simultaneously!)
         t_left = False
         t_right = False
         t_jump = False
@@ -412,7 +399,6 @@ async def main():
             if btn_jump.collidepoint((tx, ty)):
                 t_jump = True
 
-        # Mouse fallback (for testing clicking on a PC browser)
         mouse_pressed = pygame.mouse.get_pressed()[0]
         if mouse_pressed:
             mouse_pos = pygame.mouse.get_pos()
@@ -420,17 +406,14 @@ async def main():
             if btn_right.collidepoint(mouse_pos): t_right = True
             if btn_jump.collidepoint(mouse_pos): t_jump = True
 
-        # Restart level at any time
         if keys[pygame.K_r]:
             player, platforms, enemies, spikes, npc = load_level(current_level)
             game_over = False
             dialogue_active = False
             game_won = False
 
-        # Handle key press down event for ENTER or Touch Jump to advance dialogue
         if (keys[pygame.K_RETURN] or t_jump) and not enter_pressed:
             enter_pressed = True
-            
             if dialogue_active:
                 dialogue_index += 1
                 if dialogue_index >= len(level_dialogues.get(current_level, [])):
@@ -448,7 +431,6 @@ async def main():
             enter_pressed = False
 
         if not game_over and not dialogue_active and not game_won:
-            # Update logic
             fell_out = player.update(keys, platforms, t_left, t_right, t_jump)
             if fell_out:
                 game_over = True
@@ -466,7 +448,6 @@ async def main():
                 dialogue_active = True
                 dialogue_index = 0
 
-            # Camera follows player
             camera_x = player.rect.x - (WIDTH // 2) + (player.rect.width // 2)
             if camera_x < 0:
                 camera_x = 0
@@ -476,7 +457,7 @@ async def main():
                 player, platforms, enemies, spikes, npc = load_level(current_level)
                 game_over = False
 
-        # Draw everything
+        # Draw background perfectly tiled and scaled
         if bg_img is not None:
             parallax_factor = 0.5
             bg_x = -(camera_x * parallax_factor) % bg_width
@@ -485,11 +466,9 @@ async def main():
         else:
             screen.fill(SKY_BLUE)
             
-        # Level text
         lvl_text = font.render(f"Level: {current_level}", True, WHITE)
         screen.blit(lvl_text, (10, 10))
         
-        # Draw Restart Button
         screen.blit(restart_icon_img, restart_button_rect.topleft)
         
         for platform in platforms:
@@ -504,15 +483,13 @@ async def main():
         npc.draw(screen, camera_x)
         player.draw(screen, camera_x)
 
-        # UI Overlays
         if game_over:
             text = font.render("GAME OVER! Press Jump to Restart", True, RED)
             text_rect = text.get_rect(center=(WIDTH/2, HEIGHT/2))
             screen.blit(text, text_rect)
         elif dialogue_active:
-            # Responsive dialogue box based on screen WIDTH
             box_w = WIDTH - 100
-            if box_w > 800: box_w = 800 # Max width for readability
+            if box_w > 800: box_w = 800 
             box_x = (WIDTH - box_w) // 2
             
             box_surface = pygame.Surface((box_w, 120))
@@ -538,7 +515,6 @@ async def main():
             text_rect = text.get_rect(center=(WIDTH/2, HEIGHT/2))
             screen.blit(text, text_rect)
             
-        # Draw Touch Controls
         s = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
         pygame.draw.rect(s, (255, 255, 255, 100), btn_left, border_radius=10)
         pygame.draw.rect(s, (255, 255, 255, 100), btn_right, border_radius=10)
