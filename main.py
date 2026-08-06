@@ -4,18 +4,16 @@ import os
 
 pygame.init()
 
-# Use a fixed 16:9 Widescreen resolution. PyGbag will automatically rescale this to fit your screen!
 WIDTH, HEIGHT = 1280, 720
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Mario-style Platformer")
+pygame.display.set_caption("Spidey's Adventure")
 clock = pygame.time.Clock()
 font = pygame.font.SysFont(None, 48)
 dialogue_font = pygame.font.SysFont(None, 32)
 
-# Colors
+# UI Colors
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
-BROWN = (139, 69, 19)
 SKY_BLUE = (135, 206, 235)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
@@ -64,10 +62,9 @@ try:
     spike_img = pygame.image.load('struggle.png').convert_alpha()
     spike_img = pygame.transform.scale(spike_img, (40, 40))
 
-    # Scale Background perfectly to the 1280x720 screen
-    bg_img = pygame.image.load('city.jpg').convert()
-    bg_img = pygame.transform.scale(bg_img, (WIDTH, HEIGHT))
-    bg_width = WIDTH
+    # Base Background Image
+    bg_img_base = pygame.image.load('city.jpg').convert()
+    bg_img_base = pygame.transform.scale(bg_img_base, (WIDTH, HEIGHT))
 
     npc_images = {}
     for i in range(1, 11):
@@ -86,22 +83,38 @@ try:
 
 except Exception as e:
     print(f"Warning: Could not load some images. {e}")
-    player_stand_img = pygame.Surface((40, 40))
-    player_stand_img.fill((0, 0, 255))
+    player_stand_img = pygame.Surface((40, 40)); player_stand_img.fill((0, 0, 255))
     player_stand_img_left = player_stand_img
-    player_run_img = player_stand_img
-    player_run_img_left = player_stand_img
-    enemy_img = pygame.Surface((40, 40))
-    enemy_img.fill((255, 0, 0))
-    spike_img = pygame.Surface((40, 40))
-    spike_img.fill((128, 128, 128))
-    bg_img = pygame.Surface((WIDTH, HEIGHT))
-    bg_img.fill((135, 206, 235))
-    bg_width = WIDTH
+    player_run_img = player_stand_img; player_run_img_left = player_stand_img
+    enemy_img = pygame.Surface((40, 40)); enemy_img.fill((255, 0, 0))
+    spike_img = pygame.Surface((40, 40)); spike_img.fill((128, 128, 128))
+    bg_img_base = pygame.Surface((WIDTH, HEIGHT)); bg_img_base.fill(SKY_BLUE)
     npc_images = {i: pygame.Surface((40, 40)) for i in range(1, 11)}
     for img in npc_images.values(): img.fill((255, 255, 0))
-    restart_icon_img = pygame.Surface((40, 40))
-    restart_icon_img.fill((255, 0, 0))
+    restart_icon_img = pygame.Surface((40, 40)); restart_icon_img.fill((255, 0, 0))
+
+# Visual Logic Functions
+def get_level_tint(level):
+    if level <= 3: return (255, 255, 255) # Day
+    elif level <= 6: return (255, 180, 100) # Sunset
+    elif level <= 9: return (100, 100, 150) # Night
+    else: return (255, 100, 100) # Final Showdown (Red)
+
+def get_platform_color(level):
+    if level <= 3: return (139, 69, 19)   # Brown
+    elif level <= 6: return (160, 82, 45)  # Sienna
+    elif level <= 9: return (47, 79, 79)   # Dark Slate Gray
+    else: return (105, 105, 105)           # Dim Gray
+
+def create_tinted_bg(level):
+    tint = get_level_tint(level)
+    if tint == (255, 255, 255): 
+        return bg_img_base
+    tinted = bg_img_base.copy()
+    tint_surf = pygame.Surface(tinted.get_size())
+    tint_surf.fill(tint)
+    tinted.blit(tint_surf, (0, 0), special_flags=pygame.BLEND_MULT)
+    return tinted
 
 class Player:
     def __init__(self, x, y):
@@ -168,23 +181,25 @@ class Player:
         surface.blit(img, draw_rect)
 
 class Platform:
-    def __init__(self, x, y, width, height):
+    def __init__(self, x, y, width, height, color):
         self.rect = pygame.Rect(x, y, width, height)
+        self.color = color
 
     def draw(self, surface, camera_x):
         draw_rect = self.rect.copy()
         draw_rect.x -= camera_x
-        pygame.draw.rect(surface, BROWN, draw_rect)
+        pygame.draw.rect(surface, self.color, draw_rect)
 
 class Enemy:
-    def __init__(self, x, y, walk_distance):
+    def __init__(self, x, y, walk_distance, speed=ENEMY_SPEED):
         self.rect = pygame.Rect(x, y, 40, 40)
         self.start_x = x
         self.walk_distance = walk_distance
         self.direction = 1
+        self.speed = speed
         
     def update(self):
-        self.rect.x += ENEMY_SPEED * self.direction
+        self.rect.x += self.speed * self.direction
         if self.rect.x > self.start_x + self.walk_distance:
             self.direction = -1
         elif self.rect.x < self.start_x:
@@ -239,38 +254,99 @@ def load_level(level_number):
     enemies = []
     spikes = []
     
-    # Very wide level bounds to handle the 1280px screen
+    platform_color = get_platform_color(level_number)
     level_width = max(3000, 1000 + (level_number * 500))
-    
     x = 0
-    while x < level_width - 400:
-        segment_width = max(100, 400 - (level_number * 15))
-        gap_width = min(200, 40 + (level_number * 15))
-        
-        platforms.append(Platform(x, HEIGHT - 40, segment_width, 40))
-        
-        if level_number >= 2 and x > 200:
-            spikes.append(Spike(x + segment_width//2, HEIGHT - 80))
-            
-        if level_number >= 4 and x > 400:
-            platforms.append(Platform(x + segment_width//2 - 50, HEIGHT - 150, 100, 20))
-            enemies.append(Enemy(x + segment_width//2 - 40, HEIGHT - 190, 80))
-            
-        x += segment_width + gap_width
-        
-    platforms.append(Platform(level_width - 300, HEIGHT - 40, 500, 40))
-    platforms.append(Platform(level_width, 0, 200, HEIGHT))
     
-    npc = NPC(level_width - 100, HEIGHT - 80, npc_images[level_number])
+    if level_number == 1:
+        # Easy gaps
+        while x < level_width - 400:
+            platforms.append(Platform(x, HEIGHT - 40, 400, 40, platform_color))
+            x += 500
+    elif level_number == 2:
+        # Spikes on ground
+        while x < level_width - 400:
+            platforms.append(Platform(x, HEIGHT - 40, 500, 40, platform_color))
+            if x > 200:
+                spikes.append(Spike(x + 250, HEIGHT - 80))
+            x += 600
+    elif level_number == 3:
+        # Floating platforms
+        while x < level_width - 400:
+            platforms.append(Platform(x, HEIGHT - 40, 200, 40, platform_color))
+            if x > 0:
+                platforms.append(Platform(x + 250, HEIGHT - 120, 100, 20, platform_color))
+            x += 400
+    elif level_number == 4:
+        # Enemies
+        while x < level_width - 400:
+            platforms.append(Platform(x, HEIGHT - 40, 500, 40, platform_color))
+            if x > 200:
+                enemies.append(Enemy(x + 200, HEIGHT - 80, 200, ENEMY_SPEED))
+            x += 650
+    elif level_number == 5:
+        # Spikes + Enemies
+        while x < level_width - 400:
+            platforms.append(Platform(x, HEIGHT - 40, 600, 40, platform_color))
+            if x > 200:
+                spikes.append(Spike(x + 150, HEIGHT - 80))
+                enemies.append(Enemy(x + 300, HEIGHT - 80, 200, ENEMY_SPEED))
+            x += 750
+    elif level_number == 6:
+        # Precision jumping (small platforms)
+        while x < level_width - 400:
+            platforms.append(Platform(x, HEIGHT - 40, 150, 40, platform_color))
+            x += 300
+    elif level_number == 7:
+        # Sky parkour (huge spike pits)
+        platforms.append(Platform(0, HEIGHT - 40, 300, 40, platform_color))
+        x = 300
+        while x < level_width - 400:
+            platforms.append(Platform(x, HEIGHT - 40, 400, 40, platform_color))
+            spikes.append(Spike(x + 50, HEIGHT - 80))
+            spikes.append(Spike(x + 150, HEIGHT - 80))
+            spikes.append(Spike(x + 250, HEIGHT - 80))
+            spikes.append(Spike(x + 350, HEIGHT - 80))
+            platforms.append(Platform(x + 50, HEIGHT - 150, 100, 20, platform_color))
+            platforms.append(Platform(x + 250, HEIGHT - 200, 100, 20, platform_color))
+            x += 500
+    elif level_number == 8:
+        # Fast enemies
+        while x < level_width - 400:
+            platforms.append(Platform(x, HEIGHT - 40, 500, 40, platform_color))
+            if x > 200:
+                enemies.append(Enemy(x + 100, HEIGHT - 80, 300, ENEMY_SPEED * 2))
+            x += 650
+    elif level_number == 9:
+        # The Maze
+        while x < level_width - 400:
+            platforms.append(Platform(x, HEIGHT - 40, 400, 40, platform_color))
+            spikes.append(Spike(x + 200, HEIGHT - 80))
+            platforms.append(Platform(x + 100, HEIGHT - 180, 200, 20, platform_color))
+            enemies.append(Enemy(x + 100, HEIGHT - 220, 150, ENEMY_SPEED * 1.5))
+            x += 550
+    else:
+        # The Final Showdown (Horde)
+        platforms.append(Platform(0, HEIGHT - 40, level_width, 40, platform_color))
+        x = 500
+        while x < level_width - 500:
+            enemies.append(Enemy(x, HEIGHT - 80, 200, ENEMY_SPEED))
+            x += 250
+            
+    # Final safe platform and wall
+    platforms.append(Platform(level_width - 400, HEIGHT - 40, 500, 40, platform_color))
+    platforms.append(Platform(level_width, 0, 200, HEIGHT, platform_color))
+    npc = NPC(level_width - 100, HEIGHT - 80, npc_images.get(level_number, npc_images[1]))
     
-    return player, platforms, enemies, spikes, npc
-
+    current_bg_img = create_tinted_bg(level_number)
+    
+    return player, platforms, enemies, spikes, npc, current_bg_img
 
 async def main():
     global current_level, player, platforms, enemies, spikes, npc, camera_x, game_over, game_won, dialogue_active, dialogue_index, enter_pressed
 
     current_level = 1
-    player, platforms, enemies, spikes, npc = load_level(current_level)
+    player, platforms, enemies, spikes, npc, current_bg_img = load_level(current_level)
     camera_x = 0
 
     game_over = False
@@ -290,7 +366,7 @@ async def main():
                 running = False
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1 and restart_button_rect.collidepoint(event.pos):
-                    player, platforms, enemies, spikes, npc = load_level(current_level)
+                    player, platforms, enemies, spikes, npc, current_bg_img = load_level(current_level)
                     game_over = False
                     dialogue_active = False
                     game_won = False
@@ -325,7 +401,7 @@ async def main():
             if btn_jump.collidepoint(mouse_pos): t_jump = True
 
         if keys[pygame.K_r]:
-            player, platforms, enemies, spikes, npc = load_level(current_level)
+            player, platforms, enemies, spikes, npc, current_bg_img = load_level(current_level)
             game_over = False
             dialogue_active = False
             game_won = False
@@ -340,10 +416,10 @@ async def main():
                         game_won = True
                     else:
                         current_level += 1
-                        player, platforms, enemies, spikes, npc = load_level(current_level)
+                        player, platforms, enemies, spikes, npc, current_bg_img = load_level(current_level)
             elif game_won:
                 current_level = 1
-                player, platforms, enemies, spikes, npc = load_level(current_level)
+                player, platforms, enemies, spikes, npc, current_bg_img = load_level(current_level)
                 game_won = False
         elif not keys[pygame.K_RETURN] and not t_jump:
             enter_pressed = False
@@ -372,14 +448,14 @@ async def main():
                 
         else:
             if game_over and (keys[pygame.K_r] or t_jump):
-                player, platforms, enemies, spikes, npc = load_level(current_level)
+                player, platforms, enemies, spikes, npc, current_bg_img = load_level(current_level)
                 game_over = False
 
-        # Draw seamlessly tiled background
+        # Draw seamlessly tiled and tinted background
         parallax_factor = 0.5
-        bg_x = -(camera_x * parallax_factor) % bg_width
-        screen.blit(bg_img, (bg_x, 0))
-        screen.blit(bg_img, (bg_x - bg_width, 0))
+        bg_x = -(camera_x * parallax_factor) % WIDTH
+        screen.blit(current_bg_img, (bg_x, 0))
+        screen.blit(current_bg_img, (bg_x - WIDTH, 0))
             
         lvl_text = font.render(f"Level: {current_level}", True, WHITE)
         screen.blit(lvl_text, (10, 10))
