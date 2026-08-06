@@ -317,24 +317,23 @@ def load_level(level_number):
     level_width = 1800 + (level_number * 200)
 
     if level_number == 1:
-        # Brutal Level 1
         platforms.append(Platform(0, HEIGHT - 40, 400, 40, platform_color))
         spikes.append(FallingSpike(250, 100))
-        platforms.append(TrollPlatform(400, HEIGHT - 40, 150, 40, platform_color)) 
-        platforms.append(Platform(650, HEIGHT - 40, 200, 40, platform_color))
-        spikes.append(InvisibleSpike(750, HEIGHT - 80))
+        # Fixed impossible jump!
+        platforms.append(TrollPlatform(400, HEIGHT - 40, 80, 40, platform_color)) 
+        platforms.append(Platform(550, HEIGHT - 40, 300, 40, platform_color))
+        spikes.append(InvisibleSpike(700, HEIGHT - 80))
+        platforms.append(Platform(950, HEIGHT - 40, 1000, 40, platform_color))
         
     elif level_number == 2:
-        # The Double Fake
         platforms.append(Platform(0, HEIGHT - 40, 300, 40, platform_color))
-        platforms.append(TrollPlatform(300, HEIGHT - 40, 150, 40, platform_color))
+        platforms.append(TrollPlatform(300, HEIGHT - 40, 100, 40, platform_color))
         platforms.append(InvisiblePlatform(350, HEIGHT - 100, 100, 20, platform_color))
         spikes.append(FallingSpike(400, 50)) 
         platforms.append(Platform(550, HEIGHT - 40, 300, 40, platform_color))
         spikes.append(InvisibleSpike(700, HEIGHT - 80))
         
     elif level_number == 3:
-        # Enemy + Traps
         platforms.append(Platform(0, HEIGHT - 40, 400, 40, platform_color))
         enemies.append(Enemy(200, HEIGHT - 80, 150, ENEMY_SPEED * 2))
         platforms.append(Platform(500, HEIGHT - 100, 100, 20, platform_color))
@@ -344,18 +343,15 @@ def load_level(level_number):
         spikes.append(FallingSpike(950, 100))
         
     elif level_number == 4:
-        # Brutal Running NPC
         platforms.append(Platform(0, HEIGHT - 40, 800, 40, platform_color))
-        platforms.append(TrollPlatform(800, HEIGHT - 40, 100, 40, platform_color))
-        platforms.append(Platform(1000, HEIGHT - 40, 2000, 40, platform_color))
-        
+        platforms.append(TrollPlatform(800, HEIGHT - 40, 50, 40, platform_color))
+        platforms.append(Platform(950, HEIGHT - 40, 2000, 40, platform_color))
         spikes.append(InvisibleSpike(600, HEIGHT - 80))
         spikes.append(FallingSpike(800, 100))
         spikes.append(FallingSpike(1300, 100))
         spikes.append(InvisibleSpike(1500, HEIGHT - 80))
         
     elif level_number == 5:
-        # Invisible Maze
         platforms.append(Platform(0, HEIGHT - 40, 200, 40, platform_color))
         platforms.append(InvisiblePlatform(300, HEIGHT - 100, 80, 20, platform_color))
         spikes.append(FallingSpike(340, 0)) 
@@ -365,7 +361,6 @@ def load_level(level_number):
         spikes.append(InvisibleSpike(1000, HEIGHT - 80))
         
     elif level_number == 6:
-        # Enemy Swarm + Traps
         platforms.append(Platform(0, HEIGHT - 40, 3000, 40, platform_color))
         enemies.append(Enemy(400, HEIGHT - 80, 100, ENEMY_SPEED * 2))
         spikes.append(FallingSpike(600, 100))
@@ -374,16 +369,14 @@ def load_level(level_number):
         enemies.append(Enemy(1200, HEIGHT - 80, 100, ENEMY_SPEED * 3))
         
     elif level_number == 7:
-        # Leap of Death
         platforms.append(Platform(0, HEIGHT - 40, 300, 40, platform_color))
-        platforms.append(TrollPlatform(300, HEIGHT - 40, 100, 40, platform_color))
-        platforms.append(Platform(500, HEIGHT - 40, 1500, 40, platform_color))
+        platforms.append(TrollPlatform(300, HEIGHT - 40, 50, 40, platform_color))
+        platforms.append(Platform(450, HEIGHT - 40, 1500, 40, platform_color))
         spikes.append(FallingSpike(750, 100))
         spikes.append(FallingSpike(850, 100))
         spikes.append(InvisibleSpike(950, HEIGHT - 80))
         
     elif level_number == 8:
-        # Chaos
         platforms.append(Platform(0, HEIGHT - 40, 200, 40, platform_color))
         platforms.append(InvisiblePlatform(350, HEIGHT - 100, 80, 20, platform_color))
         platforms.append(TrollPlatform(550, HEIGHT - 150, 80, 20, platform_color))
@@ -392,18 +385,16 @@ def load_level(level_number):
         spikes.append(InvisibleSpike(1100, HEIGHT - 80))
         
     elif level_number == 9:
-        # The Final Gauntlet
         platforms.append(Platform(0, HEIGHT - 40, 500, 40, platform_color))
         spikes.append(InvisibleSpike(250, HEIGHT - 80))
         spikes.append(FallingSpike(400, 100))
-        platforms.append(TrollPlatform(500, HEIGHT - 40, 100, 40, platform_color))
-        platforms.append(Platform(700, HEIGHT - 40, 2000, 40, platform_color))
+        platforms.append(TrollPlatform(500, HEIGHT - 40, 50, 40, platform_color))
+        platforms.append(Platform(650, HEIGHT - 40, 2000, 40, platform_color))
         enemies.append(Enemy(900, HEIGHT - 80, 150, ENEMY_SPEED * 2))
         spikes.append(FallingSpike(1100, 100))
         spikes.append(InvisibleSpike(1300, HEIGHT - 80))
         
     else:
-        # Hell on Earth (Level 10)
         platforms.append(Platform(0, HEIGHT - 40, 3000, 40, platform_color))
         enemies.append(Enemy(300, HEIGHT - 80, 100, ENEMY_SPEED * 4))
         spikes.append(InvisibleSpike(500, HEIGHT - 80))
