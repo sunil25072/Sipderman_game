@@ -4,8 +4,9 @@ import os
 
 pygame.init()
 
-WIDTH, HEIGHT = 800, 600
-screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
+# Use a fixed 16:9 Widescreen resolution. PyGbag will automatically rescale this to fit your screen!
+WIDTH, HEIGHT = 1280, 720
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Mario-style Platformer")
 clock = pygame.time.Clock()
 font = pygame.font.SysFont(None, 48)
@@ -30,67 +31,22 @@ ENEMY_SPEED = 2
 # Dialogues for each level
 level_dialogues = {
     1: ["Spidey: Where is my Gwen?", "Black Widow: I don't know, maybe in the next level."],
-    2: [
-        "Spidey: Where is my Gwen?",
-        "Ghost Rider: Who is Gwen?",
-        "Spidey: She is my MJ.",
-        "Ghost Rider: I don't know, you can get information in the next level."
-    ],
-    3: [
-        "Spidey: Where is my Gwen?",
-        "Wolverine: I don't know, do you know where Deadpool is?",
-        "Spidey: I don't know, but why?",
-        "Wolverine: I need to kill that guy.",
-        "Spidey: Okay, all the best."
-    ],
-    4: [
-        "Spidey: Where is my Gwen?",
-        "Thor: I don't know, but you can ask my brother.",
-        "Spidey: Who is that, Loki?",
-        "Thor: Yeah, maybe he can help you.",
-        "Spidey: He killed 40 peoples.",
-        "Thor: I mean he is adopted, you can ask him."
-    ],
-    5: [
-        "Spidey: Where is my Gwen?",
-        "Loki: Who are you?",
-        "Spidey: I am Spidey, your brother said to seek help from you.",
-        "Loki: I won't help people I don't know, ask help from that green guy."
-    ],
-    6: [
-        "Spidey: Where is my Gwen?",
-        "Hulk: I don't know.",
-        "Spidey: Who can I ask?",
-        "Hulk: If you waste my time I'll give you my smash.",
-        "Spidey: Ok, byee..."
-    ],
-    7: [
-        "Spidey: Where is my Gwen?",
-        "Deadpool: I don't know you can ask my friend wolverine.",
-        "Spidey: I saw him and he wanted to kill you.",
-        "Deadpool: OMG !!! Ok beyyyy.... I need to hide somewhere."
-    ],
-    8: [
-        "Spidey: Dr. Strange, where is my Gwen?",
-        "Dr. Strange: Tony Stark knows that.",
-        "Spidey: Where is he?",
-        "Dr. Strange: He will be in the next level."
-    ],
-    9: [
-        "Spidey: Mr. Stark where is my Gwen?",
-        "Iron Man: Peter I tried to bring her here but I can't.",
-        "Spidey: So, where is my MJ?",
-        "Iron Man: Peter she is in the last stage.",
-        "Spidey: How many stages are there?",
-        "Iron Man: One last stage, final stage, your MJ is stuck in that stage.",
-        "Spidey: Thank you Mr. Stark."
-    ],
-    10: [
-        "Spidey: MJ......!!!!!",
-        "Gwen: Spidyyy.....!!!!",
-        "Spidey and Gwen: They couldn't bring us together in a movie, but at least they brought us together in a game ❤️. Thanks for that!"
-    ]
+    2: ["Spidey: Where is my Gwen?", "Ghost Rider: Who is Gwen?", "Spidey: She is my MJ.", "Ghost Rider: I don't know, you can get information in the next level."],
+    3: ["Spidey: Where is my Gwen?", "Wolverine: I don't know, do you know where Deadpool is?", "Spidey: I don't know, but why?", "Wolverine: I need to kill that guy.", "Spidey: Okay, all the best."],
+    4: ["Spidey: Where is my Gwen?", "Thor: I don't know, but you can ask my brother.", "Spidey: Who is that, Loki?", "Thor: Yeah, maybe he can help you.", "Spidey: He killed 40 peoples.", "Thor: I mean he is adopted, you can ask him."],
+    5: ["Spidey: Where is my Gwen?", "Loki: Who are you?", "Spidey: I am Spidey, your brother said to seek help from you.", "Loki: I won't help people I don't know, ask help from that green guy."],
+    6: ["Spidey: Where is my Gwen?", "Hulk: I don't know.", "Spidey: Who can I ask?", "Hulk: If you waste my time I'll give you my smash.", "Spidey: Ok, byee..."],
+    7: ["Spidey: Where is my Gwen?", "Deadpool: I don't know you can ask my friend wolverine.", "Spidey: I saw him and he wanted to kill you.", "Deadpool: OMG !!! Ok beyyyy.... I need to hide somewhere."],
+    8: ["Spidey: Dr. Strange, where is my Gwen?", "Dr. Strange: Tony Stark knows that.", "Spidey: Where is he?", "Dr. Strange: He will be in the next level."],
+    9: ["Spidey: Mr. Stark where is my Gwen?", "Iron Man: Peter I tried to bring her here but I can't.", "Spidey: So, where is my MJ?", "Iron Man: Peter she is in the last stage.", "Spidey: How many stages are there?", "Iron Man: One last stage, final stage, your MJ is stuck in that stage.", "Spidey: Thank you Mr. Stark."],
+    10: ["Spidey: MJ......!!!!!", "Gwen: Spidyyy.....!!!!", "Spidey and Gwen: They couldn't bring us together in a movie, but at least they brought us together in a game ❤️. Thanks for that!"]
 }
+
+# UI Rectangles
+restart_button_rect = pygame.Rect(WIDTH - 50, 10, 40, 40)
+btn_left = pygame.Rect(20, HEIGHT - 100, 80, 80)
+btn_right = pygame.Rect(120, HEIGHT - 100, 80, 80)
+btn_jump = pygame.Rect(WIDTH - 120, HEIGHT - 100, 100, 80)
 
 # Load Assets
 try:
@@ -108,7 +64,10 @@ try:
     spike_img = pygame.image.load('struggle.png').convert_alpha()
     spike_img = pygame.transform.scale(spike_img, (40, 40))
 
-    bg_img_original = pygame.image.load('city.jpg').convert()
+    # Scale Background perfectly to the 1280x720 screen
+    bg_img = pygame.image.load('city.jpg').convert()
+    bg_img = pygame.transform.scale(bg_img, (WIDTH, HEIGHT))
+    bg_width = WIDTH
 
     npc_images = {}
     for i in range(1, 11):
@@ -136,7 +95,9 @@ except Exception as e:
     enemy_img.fill((255, 0, 0))
     spike_img = pygame.Surface((40, 40))
     spike_img.fill((128, 128, 128))
-    bg_img_original = None
+    bg_img = pygame.Surface((WIDTH, HEIGHT))
+    bg_img.fill((135, 206, 235))
+    bg_width = WIDTH
     npc_images = {i: pygame.Surface((40, 40)) for i in range(1, 11)}
     for img in npc_images.values(): img.fill((255, 255, 0))
     restart_icon_img = pygame.Surface((40, 40))
@@ -278,8 +239,8 @@ def load_level(level_number):
     enemies = []
     spikes = []
     
-    # Ensure the level is always significantly larger than the screen WIDTH!
-    level_width = max(WIDTH * 2, 1000 + (level_number * 500))
+    # Very wide level bounds to handle the 1280px screen
+    level_width = max(3000, 1000 + (level_number * 500))
     
     x = 0
     while x < level_width - 400:
@@ -304,49 +265,9 @@ def load_level(level_number):
     
     return player, platforms, enemies, spikes, npc
 
-def calculate_resolution(window_w, window_h):
-    """Calculates optimal internal resolution based on device orientation."""
-    if window_w > 0 and window_h > 0:
-        aspect_ratio = window_w / window_h
-        if aspect_ratio < 1.0:
-            # Portrait (Mobile) - Fix WIDTH so buttons don't overlap, expand HEIGHT
-            optimal_w = 800
-            optimal_h = int(optimal_w / aspect_ratio)
-        else:
-            # Landscape (Laptop) - Fix HEIGHT to keep platforming classic, expand WIDTH
-            optimal_h = 600
-            optimal_w = int(optimal_h * aspect_ratio)
-        return optimal_w, optimal_h
-    return 800, 600
-
-def update_ui_positions():
-    """Recalculates the positions of UI elements and background scale when screen size changes."""
-    global restart_button_rect, btn_left, btn_right, btn_jump, bg_img, bg_width
-    restart_button_rect = pygame.Rect(WIDTH - 50, 10, 40, 40)
-
-    btn_left = pygame.Rect(20, HEIGHT - 100, 80, 80)
-    btn_right = pygame.Rect(120, HEIGHT - 100, 80, 80)
-    btn_jump = pygame.Rect(WIDTH - 120, HEIGHT - 100, 100, 80)
-
-    # Scale Background perfectly to COVER the screen (no black/brown bars!)
-    if bg_img_original is not None:
-        scale = max(WIDTH / bg_img_original.get_width(), HEIGHT / bg_img_original.get_height())
-        bg_width = int(bg_img_original.get_width() * scale)
-        bg_height = int(bg_img_original.get_height() * scale)
-        bg_img = pygame.transform.scale(bg_img_original, (bg_width, bg_height))
-    else:
-        bg_img = None
-        bg_width = WIDTH
 
 async def main():
-    global WIDTH, HEIGHT, screen, current_level, player, platforms, enemies, spikes, npc, camera_x, game_over, game_won, dialogue_active, dialogue_index, enter_pressed
-
-    # 1. Dynamically adapt to Laptop vs Mobile right at startup!
-    info = pygame.display.Info()
-    WIDTH, HEIGHT = calculate_resolution(info.current_w, info.current_h)
-    screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
-
-    update_ui_positions()
+    global current_level, player, platforms, enemies, spikes, npc, camera_x, game_over, game_won, dialogue_active, dialogue_index, enter_pressed
 
     current_level = 1
     player, platforms, enemies, spikes, npc = load_level(current_level)
@@ -357,6 +278,7 @@ async def main():
     dialogue_active = False
     dialogue_index = 0
     enter_pressed = False 
+    
     active_touches = {} 
 
     running = True
@@ -366,17 +288,13 @@ async def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            elif event.type == pygame.VIDEORESIZE:
-                WIDTH, HEIGHT = calculate_resolution(event.w, event.h)
-                screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
-                update_ui_positions()
-                player, platforms, enemies, spikes, npc = load_level(current_level)
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1 and restart_button_rect.collidepoint(event.pos):
                     player, platforms, enemies, spikes, npc = load_level(current_level)
                     game_over = False
                     dialogue_active = False
                     game_won = False
+            # Mobile Multi-touch tracking
             elif event.type == pygame.FINGERDOWN or event.type == pygame.FINGERMOTION:
                 tx = event.x * WIDTH
                 ty = event.y * HEIGHT
@@ -457,18 +375,14 @@ async def main():
                 player, platforms, enemies, spikes, npc = load_level(current_level)
                 game_over = False
 
-        # Draw background perfectly tiled and scaled
-        if bg_img is not None:
-            parallax_factor = 0.5
-            bg_x = -(camera_x * parallax_factor) % bg_width
-            screen.blit(bg_img, (bg_x, 0))
-            screen.blit(bg_img, (bg_x - bg_width, 0))
-        else:
-            screen.fill(SKY_BLUE)
+        # Draw seamlessly tiled background
+        parallax_factor = 0.5
+        bg_x = -(camera_x * parallax_factor) % bg_width
+        screen.blit(bg_img, (bg_x, 0))
+        screen.blit(bg_img, (bg_x - bg_width, 0))
             
         lvl_text = font.render(f"Level: {current_level}", True, WHITE)
         screen.blit(lvl_text, (10, 10))
-        
         screen.blit(restart_icon_img, restart_button_rect.topleft)
         
         for platform in platforms:
@@ -488,15 +402,12 @@ async def main():
             text_rect = text.get_rect(center=(WIDTH/2, HEIGHT/2))
             screen.blit(text, text_rect)
         elif dialogue_active:
-            box_w = WIDTH - 100
-            if box_w > 800: box_w = 800 
+            box_w = WIDTH - 200
             box_x = (WIDTH - box_w) // 2
-            
             box_surface = pygame.Surface((box_w, 120))
             box_surface.set_alpha(200)
             box_surface.fill(BLACK)
             screen.blit(box_surface, (box_x, HEIGHT - 150))
-            
             pygame.draw.rect(screen, WHITE, (box_x, HEIGHT - 150, box_w, 120), 3)
             
             lines = level_dialogues.get(current_level, ["..."])
@@ -515,10 +426,11 @@ async def main():
             text_rect = text.get_rect(center=(WIDTH/2, HEIGHT/2))
             screen.blit(text, text_rect)
             
+        # Draw Touch Controls with high visibility
         s = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-        pygame.draw.rect(s, (255, 255, 255, 100), btn_left, border_radius=10)
-        pygame.draw.rect(s, (255, 255, 255, 100), btn_right, border_radius=10)
-        pygame.draw.rect(s, (255, 255, 255, 100), btn_jump, border_radius=10)
+        pygame.draw.rect(s, (255, 255, 255, 120), btn_left, border_radius=10)
+        pygame.draw.rect(s, (255, 255, 255, 120), btn_right, border_radius=10)
+        pygame.draw.rect(s, (255, 255, 255, 120), btn_jump, border_radius=10)
         
         left_text = font.render("<", True, BLACK)
         s.blit(left_text, left_text.get_rect(center=btn_left.center))
