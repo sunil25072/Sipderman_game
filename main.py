@@ -133,7 +133,6 @@ class Platform:
 
 class TrollPlatform(Platform):
     def update(self, player):
-        # Disappears instantly when the player gets too close!
         if self.active and self.rect.colliderect(player.rect):
             self.active = False
             self.rect.y = 9999 
@@ -172,7 +171,6 @@ class FallingSpike(Spike):
         self.vel_y = 0
 
     def update(self, player):
-        # Drops out of the sky when you walk under it
         if not self.triggered and abs(player.rect.centerx - self.rect.centerx) < 60 and player.rect.y > self.rect.y:
             self.triggered = True
         
@@ -186,7 +184,6 @@ class InvisibleSpike(Spike):
         self.visible = False
 
     def update(self, player):
-        # Pops up at the last second
         if abs(player.rect.centerx - self.rect.centerx) < 80:
             self.visible = True
 
@@ -195,16 +192,18 @@ class InvisibleSpike(Spike):
             super().draw(surface, camera_x)
 
 class NPC:
-    def __init__(self, x, y, img, is_troll=False):
+    def __init__(self, x, y, img, is_troll=False, stop_x=None):
         self.rect = pygame.Rect(x, y, 40, 40)
         self.img = img
         self.is_troll = is_troll
+        self.stop_x = stop_x
         
     def update(self, player):
         if self.is_troll:
-            # Runs away from you!
             if abs(player.rect.x - self.rect.x) < 250:
-                self.rect.x += PLAYER_SPEED + 1 
+                # Stop running away once reaching the wall
+                if self.stop_x is None or self.rect.x < self.stop_x:
+                    self.rect.x += PLAYER_SPEED + 1 
                 
     def draw(self, surface, camera_x):
         draw_rect = self.rect.copy()
@@ -317,53 +316,44 @@ def load_level(level_number):
     
     platform_color = get_platform_color(level_number)
     level_width = 1600 + (level_number * 200)
-    
-    npc_is_troll = False
 
     if level_number == 1:
-        # Surprise Invisible Spike
         platforms.append(Platform(0, HEIGHT - 40, 600, 40, platform_color))
         spikes.append(InvisibleSpike(400, HEIGHT - 80)) 
         platforms.append(Platform(800, HEIGHT - 40, 800, 40, platform_color))
         
     elif level_number == 2:
-        # The Troll Floor
         platforms.append(Platform(0, HEIGHT - 40, 400, 40, platform_color))
         platforms.append(Platform(500, HEIGHT - 40, 200, 40, platform_color))
         platforms.append(TrollPlatform(700, HEIGHT - 40, 200, 40, platform_color)) 
         platforms.append(Platform(900, HEIGHT - 40, 800, 40, platform_color))
         
     elif level_number == 3:
-        # Falling Spikes
         platforms.append(Platform(0, HEIGHT - 40, 2000, 40, platform_color))
         spikes.append(FallingSpike(300, 100))
         spikes.append(FallingSpike(600, 100))
         spikes.append(FallingSpike(900, 100))
         
     elif level_number == 4:
-        # Running NPC
         platforms.append(Platform(0, HEIGHT - 40, 3000, 40, platform_color))
         spikes.append(FallingSpike(800, 100))
         spikes.append(FallingSpike(1200, 100))
-        npc_is_troll = True
         
     elif level_number == 5:
-        # Invisible Platforms
         platforms.append(Platform(0, HEIGHT - 40, 200, 40, platform_color))
         platforms.append(InvisiblePlatform(350, HEIGHT - 100, 100, 20, platform_color))
         platforms.append(InvisiblePlatform(550, HEIGHT - 160, 100, 20, platform_color))
         platforms.append(Platform(800, HEIGHT - 40, 800, 40, platform_color))
         
     elif level_number == 6:
-        # Fake Jump
+        # Fixed jump! If platform vanishes, lower safe ground catches them!
         platforms.append(Platform(0, HEIGHT - 40, 400, 40, platform_color))
         spikes.append(Spike(200, HEIGHT - 80))
         platforms.append(Platform(500, HEIGHT - 120, 100, 20, platform_color))
         platforms.append(TrollPlatform(700, HEIGHT - 120, 100, 20, platform_color)) 
-        platforms.append(Platform(900, HEIGHT - 40, 800, 40, platform_color))
+        platforms.append(Platform(750, HEIGHT - 40, 1000, 40, platform_color))
         
     elif level_number == 7:
-        # Sneaky Spikes
         platforms.append(Platform(0, HEIGHT - 40, 400, 40, platform_color))
         platforms.append(Platform(500, HEIGHT - 40, 1000, 40, platform_color))
         enemies.append(Enemy(700, HEIGHT - 80, 100, ENEMY_SPEED))
@@ -371,15 +361,13 @@ def load_level(level_number):
         enemies.append(Enemy(1000, HEIGHT - 80, 100, ENEMY_SPEED))
         
     elif level_number == 8:
-        # Ultimate Chaos
         platforms.append(Platform(0, HEIGHT - 40, 300, 40, platform_color))
         platforms.append(InvisiblePlatform(450, HEIGHT - 100, 100, 20, platform_color))
         spikes.append(FallingSpike(450, 50)) 
         platforms.append(TrollPlatform(600, HEIGHT - 150, 100, 20, platform_color))
-        platforms.append(Platform(800, HEIGHT - 40, 800, 40, platform_color))
+        platforms.append(Platform(700, HEIGHT - 40, 800, 40, platform_color)) # Moved closer
         
     elif level_number == 9:
-        # The Gauntlet
         platforms.append(Platform(0, HEIGHT - 40, 2000, 40, platform_color))
         spikes.append(InvisibleSpike(300, HEIGHT - 80))
         spikes.append(FallingSpike(500, 100))
@@ -387,21 +375,21 @@ def load_level(level_number):
         spikes.append(Spike(700, HEIGHT - 80)) 
         
     else:
-        # Fake Gwen Clones (Fast Enemies)
         platforms.append(Platform(0, HEIGHT - 40, 2000, 40, platform_color))
         enemies.append(Enemy(400, HEIGHT - 80, 200, ENEMY_SPEED * 3))
         enemies.append(Enemy(700, HEIGHT - 80, 200, ENEMY_SPEED * 3))
         spikes.append(FallingSpike(1000, 100))
 
-    # NPC placement
-    if level_number == 4:
-        npc = NPC(400, HEIGHT - 80, npc_images[level_number], is_troll=True)
-    else:
-        npc = NPC(level_width - 100, HEIGHT - 80, npc_images.get(level_number, npc_images[1]))
+    # NPC placement and Wall logic
+    end_wall_x = level_width - 200
     
-    # End wall
-    platforms.append(Platform(level_width - 200, HEIGHT - 40, 500, 40, platform_color))
-    platforms.append(Platform(level_width, 0, 200, HEIGHT, platform_color))
+    if level_number == 4:
+        npc = NPC(400, HEIGHT - 80, npc_images[level_number], is_troll=True, stop_x=end_wall_x - 50)
+    else:
+        npc = NPC(level_width - 300, HEIGHT - 80, npc_images.get(level_number, npc_images[1]))
+    
+    platforms.append(Platform(level_width - 400, HEIGHT - 40, 500, 40, platform_color))
+    platforms.append(Platform(end_wall_x, 0, 200, HEIGHT, platform_color))
     
     current_bg_img = create_tinted_bg(level_number)
     return player, platforms, enemies, spikes, npc, current_bg_img
