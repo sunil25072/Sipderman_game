@@ -4,8 +4,10 @@ import os
 
 pygame.init()
 
-WIDTH, HEIGHT = 1920, 825
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
+# Initial screen setup - We use RESIZABLE so the user can rotate their phone or resize the browser.
+# 800x600 is just a temporary fallback; PyGbag will automatically override this to the browser's true size.
+WIDTH, HEIGHT = 800, 600
+screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
 pygame.display.set_caption("Mario-style Platformer")
 clock = pygame.time.Clock()
 font = pygame.font.SysFont(None, 48)
@@ -108,10 +110,8 @@ try:
     spike_img = pygame.image.load('struggle.png').convert_alpha()
     spike_img = pygame.transform.scale(spike_img, (40, 40))
 
-    # Background Image
-    bg_img = pygame.image.load('city.jpg').convert()
-    bg_width = int(HEIGHT * (16 / 9))
-    bg_img = pygame.transform.scale(bg_img, (bg_width, HEIGHT))
+    # We keep the raw original background image to scale it later if screen rotates
+    bg_img_original = pygame.image.load('city.jpg').convert()
 
     # NPC Images
     npc_images = {}
@@ -141,12 +141,11 @@ except Exception as e:
     enemy_img.fill((255, 0, 0))
     spike_img = pygame.Surface((40, 40))
     spike_img.fill((128, 128, 128))
+    bg_img_original = None
     npc_images = {i: pygame.Surface((40, 40)) for i in range(1, 11)}
     for img in npc_images.values(): img.fill((255, 255, 0))
     restart_icon_img = pygame.Surface((40, 40))
     restart_icon_img.fill((255, 0, 0))
-    bubble_img = pygame.Surface((WIDTH - 100, 150))
-    bubble_img.fill((255, 255, 255))
 
 class Player:
     def __init__(self, x, y):
@@ -325,10 +324,35 @@ def load_level(level_number):
     
     return player, platforms, enemies, spikes, npc
 
-async def main():
-    global current_level, player, platforms, enemies, spikes, npc, camera_x, game_over, game_won, dialogue_active, dialogue_index, enter_pressed, restart_button_rect, btn_left, btn_right, btn_jump
+def update_ui_positions():
+    """Recalculates the positions of UI elements when the screen size changes."""
+    global restart_button_rect, btn_left, btn_right, btn_jump, bg_img, bg_width
+    restart_button_rect = pygame.Rect(WIDTH - 50, 10, 40, 40)
 
-    # Setup Game
+    # Touch Controls Rectangles (dynamically placed at bottom based on HEIGHT/WIDTH)
+    btn_left = pygame.Rect(20, HEIGHT - 100, 80, 80)
+    btn_right = pygame.Rect(120, HEIGHT - 100, 80, 80)
+    btn_jump = pygame.Rect(WIDTH - 120, HEIGHT - 100, 100, 80)
+
+    # Scale Background safely
+    if bg_img_original is not None:
+        bg_width = int(HEIGHT * (16 / 9))
+        bg_img = pygame.transform.scale(bg_img_original, (bg_width, HEIGHT))
+    else:
+        bg_img = None
+        bg_width = WIDTH
+
+async def main():
+    global WIDTH, HEIGHT, screen, current_level, player, platforms, enemies, spikes, npc, camera_x, game_over, game_won, dialogue_active, dialogue_index, enter_pressed
+
+    # Fetch initial screen size in PyGbag (if available) to adapt to mobile immediately
+    info = pygame.display.Info()
+    if info.current_w > 0 and info.current_h > 0:
+        WIDTH, HEIGHT = info.current_w, info.current_h
+        screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
+
+    update_ui_positions()
+
     current_level = 1
     player, platforms, enemies, spikes, npc = load_level(current_level)
     camera_x = 0
@@ -337,40 +361,64 @@ async def main():
     game_won = False
     dialogue_active = False
     dialogue_index = 0
-
-    # Track key presses to prevent holding ENTER from skipping multiple dialogues
     enter_pressed = False 
 
-    restart_button_rect = pygame.Rect(WIDTH - 50, 10, 40, 40)
-
-    # Touch Controls Rectangles
-    btn_left = pygame.Rect(20, HEIGHT - 100, 80, 80)
-    btn_right = pygame.Rect(120, HEIGHT - 100, 80, 80)
-    btn_jump = pygame.Rect(WIDTH - 120, HEIGHT - 100, 100, 80)
+    # Dictionary to track multiple simultaneous touch inputs
+    active_touches = {} 
 
     running = True
     while running:
-        # 60 Frames Per Second
         clock.tick(60)
         
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            elif event.type == pygame.VIDEORESIZE:
+                # Handle rotation / resizing
+                WIDTH, HEIGHT = event.w, event.h
+                screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
+                update_ui_positions()
+                # Reload level to snap the ground to the new screen height
+                player, platforms, enemies, spikes, npc = load_level(current_level)
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1 and restart_button_rect.collidepoint(event.pos):
                     player, platforms, enemies, spikes, npc = load_level(current_level)
                     game_over = False
                     dialogue_active = False
                     game_won = False
+                    
+            # MULTI-TOUCH EVENTS (Tracks an unlimited number of fingers)
+            elif event.type == pygame.FINGERDOWN or event.type == pygame.FINGERMOTION:
+                # FINGER events return normalized values (0.0 to 1.0), so we multiply by screen dimensions
+                tx = event.x * WIDTH
+                ty = event.y * HEIGHT
+                active_touches[event.finger_id] = (tx, ty)
+            elif event.type == pygame.FINGERUP:
+                if event.finger_id in active_touches:
+                    del active_touches[event.finger_id]
 
         keys = pygame.key.get_pressed()
-        mouse_pressed = pygame.mouse.get_pressed()[0]
-        mouse_pos = pygame.mouse.get_pos()
         
-        # Touch inputs
-        t_left = mouse_pressed and btn_left.collidepoint(mouse_pos)
-        t_right = mouse_pressed and btn_right.collidepoint(mouse_pos)
-        t_jump = mouse_pressed and btn_jump.collidepoint(mouse_pos)
+        # Evaluate Touch Buttons (supports holding multiple buttons simultaneously!)
+        t_left = False
+        t_right = False
+        t_jump = False
+        
+        for tx, ty in active_touches.values():
+            if btn_left.collidepoint((tx, ty)):
+                t_left = True
+            if btn_right.collidepoint((tx, ty)):
+                t_right = True
+            if btn_jump.collidepoint((tx, ty)):
+                t_jump = True
+
+        # Mouse fallback (for testing clicking on a PC browser)
+        mouse_pressed = pygame.mouse.get_pressed()[0]
+        if mouse_pressed:
+            mouse_pos = pygame.mouse.get_pos()
+            if btn_left.collidepoint(mouse_pos): t_left = True
+            if btn_right.collidepoint(mouse_pos): t_right = True
+            if btn_jump.collidepoint(mouse_pos): t_jump = True
 
         # Restart level at any time
         if keys[pygame.K_r]:
@@ -379,13 +427,12 @@ async def main():
             dialogue_active = False
             game_won = False
 
-        # Handle key press down event for ENTER to advance dialogue
+        # Handle key press down event for ENTER or Touch Jump to advance dialogue
         if (keys[pygame.K_RETURN] or t_jump) and not enter_pressed:
             enter_pressed = True
             
             if dialogue_active:
                 dialogue_index += 1
-                # If no more dialogue lines, finish the level
                 if dialogue_index >= len(level_dialogues.get(current_level, [])):
                     dialogue_active = False
                     if current_level >= 10:
@@ -400,25 +447,21 @@ async def main():
         elif not keys[pygame.K_RETURN] and not t_jump:
             enter_pressed = False
 
-
         if not game_over and not dialogue_active and not game_won:
             # Update logic
             fell_out = player.update(keys, platforms, t_left, t_right, t_jump)
             if fell_out:
                 game_over = True
                 
-            # Update enemies
             for enemy in enemies:
                 enemy.update()
                 if player.rect.colliderect(enemy.rect):
                     game_over = True
                     
-            # Check collision with spikes
             for spike in spikes:
                 if player.rect.colliderect(spike.rect):
                     game_over = True
 
-            # Check win condition (trigger dialogue)
             if player.rect.colliderect(npc.rect):
                 dialogue_active = True
                 dialogue_index = 0
@@ -429,25 +472,24 @@ async def main():
                 camera_x = 0
                 
         else:
-            # Handle game over restart
-            if game_over and keys[pygame.K_r]:
+            if game_over and (keys[pygame.K_r] or t_jump):
                 player, platforms, enemies, spikes, npc = load_level(current_level)
                 game_over = False
 
         # Draw everything
-        try:
+        if bg_img is not None:
             parallax_factor = 0.5
             bg_x = -(camera_x * parallax_factor) % bg_width
             screen.blit(bg_img, (bg_x, 0))
             screen.blit(bg_img, (bg_x - bg_width, 0))
-        except NameError:
+        else:
             screen.fill(SKY_BLUE)
             
         # Level text
         lvl_text = font.render(f"Level: {current_level}", True, WHITE)
         screen.blit(lvl_text, (10, 10))
         
-        # Draw Restart Button (Icon)
+        # Draw Restart Button
         screen.blit(restart_icon_img, restart_button_rect.topleft)
         
         for platform in platforms:
@@ -464,32 +506,35 @@ async def main():
 
         # UI Overlays
         if game_over:
-            text = font.render("GAME OVER! Press R to Restart", True, RED)
+            text = font.render("GAME OVER! Press Jump to Restart", True, RED)
             text_rect = text.get_rect(center=(WIDTH/2, HEIGHT/2))
             screen.blit(text, text_rect)
         elif dialogue_active:
-            # Create a semi-transparent surface for the dialogue box
-            box_surface = pygame.Surface((WIDTH - 100, 120))
-            box_surface.set_alpha(200) # Transparency
-            box_surface.fill(BLACK)
-            screen.blit(box_surface, (50, HEIGHT - 150))
+            # Responsive dialogue box based on screen WIDTH
+            box_w = WIDTH - 100
+            if box_w > 800: box_w = 800 # Max width for readability
+            box_x = (WIDTH - box_w) // 2
             
-            # Draw border
-            pygame.draw.rect(screen, WHITE, (50, HEIGHT - 150, WIDTH - 100, 120), 3)
+            box_surface = pygame.Surface((box_w, 120))
+            box_surface.set_alpha(200)
+            box_surface.fill(BLACK)
+            screen.blit(box_surface, (box_x, HEIGHT - 150))
+            
+            pygame.draw.rect(screen, WHITE, (box_x, HEIGHT - 150, box_w, 120), 3)
             
             lines = level_dialogues.get(current_level, ["..."])
             if dialogue_index < len(lines):
                 current_line = lines[dialogue_index]
-                text_rect = pygame.Rect(70, HEIGHT - 130, WIDTH - 140, 100)
+                text_rect = pygame.Rect(box_x + 20, HEIGHT - 130, box_w - 40, 100)
                 draw_text_wrapped(screen, current_line, dialogue_font, WHITE, text_rect)
                 
-                prompt = dialogue_font.render("Press ENTER to continue...", True, (200, 200, 200))
+                prompt = dialogue_font.render("Press JUMP to continue...", True, (200, 200, 200))
                 prompt_rect = prompt.get_rect()
-                prompt_rect.bottomright = (WIDTH - 65, HEIGHT - 45)
+                prompt_rect.bottomright = (box_x + box_w - 15, HEIGHT - 45)
                 screen.blit(prompt, prompt_rect)
                 
         elif game_won:
-            text = font.render("YOU SAVED THE GIRL! YOU WIN! Press ENTER to play again", True, GOLD)
+            text = font.render("YOU SAVED THE GIRL! YOU WIN!", True, GOLD)
             text_rect = text.get_rect(center=(WIDTH/2, HEIGHT/2))
             screen.blit(text, text_rect)
             
@@ -498,7 +543,7 @@ async def main():
         pygame.draw.rect(s, (255, 255, 255, 100), btn_left, border_radius=10)
         pygame.draw.rect(s, (255, 255, 255, 100), btn_right, border_radius=10)
         pygame.draw.rect(s, (255, 255, 255, 100), btn_jump, border_radius=10)
-        # Add text labels
+        
         left_text = font.render("<", True, BLACK)
         s.blit(left_text, left_text.get_rect(center=btn_left.center))
         right_text = font.render(">", True, BLACK)
