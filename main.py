@@ -6,12 +6,12 @@ pygame.init()
 
 WIDTH, HEIGHT = 1280, 720
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Spidey's Adventure")
+pygame.display.set_caption("Spidey's Troll Adventure")
 clock = pygame.time.Clock()
 font = pygame.font.SysFont(None, 48)
 dialogue_font = pygame.font.SysFont(None, 32)
 
-# UI Colors
+# Colors
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 SKY_BLUE = (135, 206, 235)
@@ -19,14 +19,14 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 GOLD = (255, 215, 0)
 
-# Physics Constants
+# Physics
 GRAVITY = 0.5
 MAX_FALL_SPEED = 10
 JUMP_STRENGTH = -12
 PLAYER_SPEED = 5
 ENEMY_SPEED = 2
 
-# Dialogues for each level
+# Dialogues
 level_dialogues = {
     1: ["Spidey: Where is my Gwen?", "Black Widow: I don't know, maybe in the next level."],
     2: ["Spidey: Where is my Gwen?", "Ghost Rider: Who is Gwen?", "Spidey: She is my MJ.", "Ghost Rider: I don't know, you can get information in the next level."],
@@ -40,7 +40,7 @@ level_dialogues = {
     10: ["Spidey: MJ......!!!!!", "Gwen: Spidyyy.....!!!!", "Spidey and Gwen: They couldn't bring us together in a movie, but at least they brought us together in a game ❤️. Thanks for that!"]
 }
 
-# UI Rectangles
+# UI
 restart_button_rect = pygame.Rect(WIDTH - 50, 10, 40, 40)
 btn_left = pygame.Rect(20, HEIGHT - 100, 80, 80)
 btn_right = pygame.Rect(120, HEIGHT - 100, 80, 80)
@@ -62,7 +62,6 @@ try:
     spike_img = pygame.image.load('struggle.png').convert_alpha()
     spike_img = pygame.transform.scale(spike_img, (40, 40))
 
-    # Base Background Image
     bg_img_base = pygame.image.load('city.jpg').convert()
     bg_img_base = pygame.transform.scale(bg_img_base, (WIDTH, HEIGHT))
 
@@ -74,8 +73,7 @@ try:
             img = pygame.transform.scale(img, (40, 40))
             npc_images[i] = img
         except:
-            img = pygame.Surface((40, 40))
-            img.fill((255, 255, 0))
+            img = pygame.Surface((40, 40)); img.fill((255, 255, 0))
             npc_images[i] = img
             
     restart_icon_img = pygame.image.load('Restart.png').convert_alpha()
@@ -93,28 +91,129 @@ except Exception as e:
     for img in npc_images.values(): img.fill((255, 255, 0))
     restart_icon_img = pygame.Surface((40, 40)); restart_icon_img.fill((255, 0, 0))
 
-# Visual Logic Functions
 def get_level_tint(level):
-    if level <= 3: return (255, 255, 255) # Day
-    elif level <= 6: return (255, 180, 100) # Sunset
-    elif level <= 9: return (100, 100, 150) # Night
-    else: return (255, 100, 100) # Final Showdown (Red)
+    if level <= 3: return (255, 255, 255)
+    elif level <= 6: return (255, 180, 100)
+    elif level <= 9: return (100, 100, 150)
+    else: return (255, 100, 100)
 
 def get_platform_color(level):
-    if level <= 3: return (139, 69, 19)   # Brown
-    elif level <= 6: return (160, 82, 45)  # Sienna
-    elif level <= 9: return (47, 79, 79)   # Dark Slate Gray
-    else: return (105, 105, 105)           # Dim Gray
+    if level <= 3: return (139, 69, 19)
+    elif level <= 6: return (160, 82, 45)
+    elif level <= 9: return (47, 79, 79)
+    else: return (105, 105, 105)
 
 def create_tinted_bg(level):
     tint = get_level_tint(level)
-    if tint == (255, 255, 255): 
-        return bg_img_base
+    if tint == (255, 255, 255): return bg_img_base
     tinted = bg_img_base.copy()
     tint_surf = pygame.Surface(tinted.get_size())
     tint_surf.fill(tint)
     tinted.blit(tint_surf, (0, 0), special_flags=pygame.BLEND_MULT)
     return tinted
+
+# =======================
+# THE LEVEL DEVIL TRAPS
+# =======================
+
+class Platform:
+    def __init__(self, x, y, width, height, color):
+        self.rect = pygame.Rect(x, y, width, height)
+        self.color = color
+        self.active = True
+
+    def update(self, player):
+        pass
+
+    def draw(self, surface, camera_x):
+        if self.active:
+            draw_rect = self.rect.copy()
+            draw_rect.x -= camera_x
+            pygame.draw.rect(surface, self.color, draw_rect)
+
+class TrollPlatform(Platform):
+    def update(self, player):
+        # Disappears instantly when the player gets too close!
+        if self.active and self.rect.colliderect(player.rect):
+            self.active = False
+            self.rect.y = 9999 
+
+class InvisiblePlatform(Platform):
+    def __init__(self, x, y, width, height, color):
+        super().__init__(x, y, width, height, color)
+        self.visible = False
+
+    def update(self, player):
+        if abs(player.rect.centerx - self.rect.centerx) < 150:
+            self.visible = True
+
+    def draw(self, surface, camera_x):
+        if self.visible and self.active:
+            super().draw(surface, camera_x)
+
+class Spike:
+    def __init__(self, x, y):
+        self.rect = pygame.Rect(x, y, 40, 40)
+        self.active = True
+        
+    def update(self, player):
+        pass
+        
+    def draw(self, surface, camera_x):
+        if self.active:
+            draw_rect = self.rect.copy()
+            draw_rect.x -= camera_x
+            surface.blit(spike_img, draw_rect)
+
+class FallingSpike(Spike):
+    def __init__(self, x, y):
+        super().__init__(x, y)
+        self.triggered = False
+        self.vel_y = 0
+
+    def update(self, player):
+        # Drops out of the sky when you walk under it
+        if not self.triggered and abs(player.rect.centerx - self.rect.centerx) < 60 and player.rect.y > self.rect.y:
+            self.triggered = True
+        
+        if self.triggered:
+            self.vel_y += GRAVITY * 2
+            self.rect.y += self.vel_y
+
+class InvisibleSpike(Spike):
+    def __init__(self, x, y):
+        super().__init__(x, y)
+        self.visible = False
+
+    def update(self, player):
+        # Pops up at the last second
+        if abs(player.rect.centerx - self.rect.centerx) < 80:
+            self.visible = True
+
+    def draw(self, surface, camera_x):
+        if self.visible and self.active:
+            super().draw(surface, camera_x)
+
+class NPC:
+    def __init__(self, x, y, img, is_troll=False):
+        self.rect = pygame.Rect(x, y, 40, 40)
+        self.img = img
+        self.is_troll = is_troll
+        
+    def update(self, player):
+        if self.is_troll:
+            # Runs away from you!
+            if abs(player.rect.x - self.rect.x) < 250:
+                self.rect.x += PLAYER_SPEED + 1 
+                
+    def draw(self, surface, camera_x):
+        draw_rect = self.rect.copy()
+        draw_rect.x -= camera_x
+        surface.blit(self.img, draw_rect)
+
+# =======================
+# PLAYER & ENEMIES
+# =======================
 
 class Player:
     def __init__(self, x, y):
@@ -140,11 +239,9 @@ class Player:
         self.rect.x += self.vel_x
         
         for platform in platforms:
-            if self.rect.colliderect(platform.rect):
-                if self.vel_x > 0:
-                    self.rect.right = platform.rect.left
-                elif self.vel_x < 0:
-                    self.rect.left = platform.rect.right
+            if platform.active and self.rect.colliderect(platform.rect):
+                if self.vel_x > 0: self.rect.right = platform.rect.left
+                elif self.vel_x < 0: self.rect.left = platform.rect.right
 
         if (keys[pygame.K_SPACE] or keys[pygame.K_UP] or t_jump) and self.is_grounded:
             self.vel_y = JUMP_STRENGTH
@@ -158,7 +255,7 @@ class Player:
         self.is_grounded = False
         
         for platform in platforms:
-            if self.rect.colliderect(platform.rect):
+            if platform.active and self.rect.colliderect(platform.rect):
                 if self.vel_y > 0:
                     self.rect.bottom = platform.rect.top
                     self.vel_y = 0
@@ -167,28 +264,15 @@ class Player:
                     self.rect.top = platform.rect.bottom
                     self.vel_y = 0
 
-        if self.rect.y > HEIGHT + 100:
-            return True
+        if self.rect.y > HEIGHT + 100: return True
         return False
 
     def draw(self, surface, camera_x):
         draw_rect = self.rect.copy()
         draw_rect.x -= camera_x
-        if self.is_running:
-            img = player_run_img if self.facing_right else player_run_img_left
-        else:
-            img = player_stand_img if self.facing_right else player_stand_img_left
+        if self.is_running: img = player_run_img if self.facing_right else player_run_img_left
+        else: img = player_stand_img if self.facing_right else player_stand_img_left
         surface.blit(img, draw_rect)
-
-class Platform:
-    def __init__(self, x, y, width, height, color):
-        self.rect = pygame.Rect(x, y, width, height)
-        self.color = color
-
-    def draw(self, surface, camera_x):
-        draw_rect = self.rect.copy()
-        draw_rect.x -= camera_x
-        pygame.draw.rect(surface, self.color, draw_rect)
 
 class Enemy:
     def __init__(self, x, y, walk_distance, speed=ENEMY_SPEED):
@@ -200,34 +284,13 @@ class Enemy:
         
     def update(self):
         self.rect.x += self.speed * self.direction
-        if self.rect.x > self.start_x + self.walk_distance:
-            self.direction = -1
-        elif self.rect.x < self.start_x:
-            self.direction = 1
+        if self.rect.x > self.start_x + self.walk_distance: self.direction = -1
+        elif self.rect.x < self.start_x: self.direction = 1
             
     def draw(self, surface, camera_x):
         draw_rect = self.rect.copy()
         draw_rect.x -= camera_x
         surface.blit(enemy_img, draw_rect)
-
-class Spike:
-    def __init__(self, x, y):
-        self.rect = pygame.Rect(x, y, 40, 40)
-        
-    def draw(self, surface, camera_x):
-        draw_rect = self.rect.copy()
-        draw_rect.x -= camera_x
-        surface.blit(spike_img, draw_rect)
-
-class NPC:
-    def __init__(self, x, y, img):
-        self.rect = pygame.Rect(x, y, 40, 40)
-        self.img = img
-        
-    def draw(self, surface, camera_x):
-        draw_rect = self.rect.copy()
-        draw_rect.x -= camera_x
-        surface.blit(self.img, draw_rect)
 
 def draw_text_wrapped(surface, text, font, color, rect):
     words = text.split(' ')
@@ -250,96 +313,97 @@ def draw_text_wrapped(surface, text, font, color, rect):
 
 def load_level(level_number):
     player = Player(100, HEIGHT - 100)
-    platforms = []
-    enemies = []
-    spikes = []
+    platforms, enemies, spikes = [], [], []
     
     platform_color = get_platform_color(level_number)
-    level_width = max(3000, 1000 + (level_number * 500))
-    x = 0
+    level_width = 1600 + (level_number * 200)
     
+    npc_is_troll = False
+
     if level_number == 1:
-        # Easy gaps
-        while x < level_width - 400:
-            platforms.append(Platform(x, HEIGHT - 40, 400, 40, platform_color))
-            x += 500
+        # Surprise Invisible Spike
+        platforms.append(Platform(0, HEIGHT - 40, 600, 40, platform_color))
+        spikes.append(InvisibleSpike(400, HEIGHT - 80)) 
+        platforms.append(Platform(800, HEIGHT - 40, 800, 40, platform_color))
+        
     elif level_number == 2:
-        # Spikes on ground
-        while x < level_width - 400:
-            platforms.append(Platform(x, HEIGHT - 40, 500, 40, platform_color))
-            if x > 200:
-                spikes.append(Spike(x + 250, HEIGHT - 80))
-            x += 600
+        # The Troll Floor
+        platforms.append(Platform(0, HEIGHT - 40, 400, 40, platform_color))
+        platforms.append(Platform(500, HEIGHT - 40, 200, 40, platform_color))
+        platforms.append(TrollPlatform(700, HEIGHT - 40, 200, 40, platform_color)) 
+        platforms.append(Platform(900, HEIGHT - 40, 800, 40, platform_color))
+        
     elif level_number == 3:
-        # Floating platforms
-        while x < level_width - 400:
-            platforms.append(Platform(x, HEIGHT - 40, 200, 40, platform_color))
-            if x > 0:
-                platforms.append(Platform(x + 250, HEIGHT - 120, 100, 20, platform_color))
-            x += 400
+        # Falling Spikes
+        platforms.append(Platform(0, HEIGHT - 40, 2000, 40, platform_color))
+        spikes.append(FallingSpike(300, 100))
+        spikes.append(FallingSpike(600, 100))
+        spikes.append(FallingSpike(900, 100))
+        
     elif level_number == 4:
-        # Enemies
-        while x < level_width - 400:
-            platforms.append(Platform(x, HEIGHT - 40, 500, 40, platform_color))
-            if x > 200:
-                enemies.append(Enemy(x + 200, HEIGHT - 80, 200, ENEMY_SPEED))
-            x += 650
+        # Running NPC
+        platforms.append(Platform(0, HEIGHT - 40, 3000, 40, platform_color))
+        spikes.append(FallingSpike(800, 100))
+        spikes.append(FallingSpike(1200, 100))
+        npc_is_troll = True
+        
     elif level_number == 5:
-        # Spikes + Enemies
-        while x < level_width - 400:
-            platforms.append(Platform(x, HEIGHT - 40, 600, 40, platform_color))
-            if x > 200:
-                spikes.append(Spike(x + 150, HEIGHT - 80))
-                enemies.append(Enemy(x + 300, HEIGHT - 80, 200, ENEMY_SPEED))
-            x += 750
+        # Invisible Platforms
+        platforms.append(Platform(0, HEIGHT - 40, 200, 40, platform_color))
+        platforms.append(InvisiblePlatform(350, HEIGHT - 100, 100, 20, platform_color))
+        platforms.append(InvisiblePlatform(550, HEIGHT - 160, 100, 20, platform_color))
+        platforms.append(Platform(800, HEIGHT - 40, 800, 40, platform_color))
+        
     elif level_number == 6:
-        # Precision jumping (small platforms)
-        while x < level_width - 400:
-            platforms.append(Platform(x, HEIGHT - 40, 150, 40, platform_color))
-            x += 300
+        # Fake Jump
+        platforms.append(Platform(0, HEIGHT - 40, 400, 40, platform_color))
+        spikes.append(Spike(200, HEIGHT - 80))
+        platforms.append(Platform(500, HEIGHT - 120, 100, 20, platform_color))
+        platforms.append(TrollPlatform(700, HEIGHT - 120, 100, 20, platform_color)) 
+        platforms.append(Platform(900, HEIGHT - 40, 800, 40, platform_color))
+        
     elif level_number == 7:
-        # Sky parkour (huge spike pits)
-        platforms.append(Platform(0, HEIGHT - 40, 300, 40, platform_color))
-        x = 300
-        while x < level_width - 400:
-            platforms.append(Platform(x, HEIGHT - 40, 400, 40, platform_color))
-            spikes.append(Spike(x + 50, HEIGHT - 80))
-            spikes.append(Spike(x + 150, HEIGHT - 80))
-            spikes.append(Spike(x + 250, HEIGHT - 80))
-            spikes.append(Spike(x + 350, HEIGHT - 80))
-            platforms.append(Platform(x + 50, HEIGHT - 150, 100, 20, platform_color))
-            platforms.append(Platform(x + 250, HEIGHT - 200, 100, 20, platform_color))
-            x += 500
+        # Sneaky Spikes
+        platforms.append(Platform(0, HEIGHT - 40, 400, 40, platform_color))
+        platforms.append(Platform(500, HEIGHT - 40, 1000, 40, platform_color))
+        enemies.append(Enemy(700, HEIGHT - 80, 100, ENEMY_SPEED))
+        spikes.append(InvisibleSpike(900, HEIGHT - 80))
+        enemies.append(Enemy(1000, HEIGHT - 80, 100, ENEMY_SPEED))
+        
     elif level_number == 8:
-        # Fast enemies
-        while x < level_width - 400:
-            platforms.append(Platform(x, HEIGHT - 40, 500, 40, platform_color))
-            if x > 200:
-                enemies.append(Enemy(x + 100, HEIGHT - 80, 300, ENEMY_SPEED * 2))
-            x += 650
+        # Ultimate Chaos
+        platforms.append(Platform(0, HEIGHT - 40, 300, 40, platform_color))
+        platforms.append(InvisiblePlatform(450, HEIGHT - 100, 100, 20, platform_color))
+        spikes.append(FallingSpike(450, 50)) 
+        platforms.append(TrollPlatform(600, HEIGHT - 150, 100, 20, platform_color))
+        platforms.append(Platform(800, HEIGHT - 40, 800, 40, platform_color))
+        
     elif level_number == 9:
-        # The Maze
-        while x < level_width - 400:
-            platforms.append(Platform(x, HEIGHT - 40, 400, 40, platform_color))
-            spikes.append(Spike(x + 200, HEIGHT - 80))
-            platforms.append(Platform(x + 100, HEIGHT - 180, 200, 20, platform_color))
-            enemies.append(Enemy(x + 100, HEIGHT - 220, 150, ENEMY_SPEED * 1.5))
-            x += 550
+        # The Gauntlet
+        platforms.append(Platform(0, HEIGHT - 40, 2000, 40, platform_color))
+        spikes.append(InvisibleSpike(300, HEIGHT - 80))
+        spikes.append(FallingSpike(500, 100))
+        platforms.append(TrollPlatform(700, HEIGHT - 40, 100, 40, platform_color))
+        spikes.append(Spike(700, HEIGHT - 80)) 
+        
     else:
-        # The Final Showdown (Horde)
-        platforms.append(Platform(0, HEIGHT - 40, level_width, 40, platform_color))
-        x = 500
-        while x < level_width - 500:
-            enemies.append(Enemy(x, HEIGHT - 80, 200, ENEMY_SPEED))
-            x += 250
-            
-    # Final safe platform and wall
-    platforms.append(Platform(level_width - 400, HEIGHT - 40, 500, 40, platform_color))
+        # Fake Gwen Clones (Fast Enemies)
+        platforms.append(Platform(0, HEIGHT - 40, 2000, 40, platform_color))
+        enemies.append(Enemy(400, HEIGHT - 80, 200, ENEMY_SPEED * 3))
+        enemies.append(Enemy(700, HEIGHT - 80, 200, ENEMY_SPEED * 3))
+        spikes.append(FallingSpike(1000, 100))
+
+    # NPC placement
+    if level_number == 4:
+        npc = NPC(400, HEIGHT - 80, npc_images[level_number], is_troll=True)
+    else:
+        npc = NPC(level_width - 100, HEIGHT - 80, npc_images.get(level_number, npc_images[1]))
+    
+    # End wall
+    platforms.append(Platform(level_width - 200, HEIGHT - 40, 500, 40, platform_color))
     platforms.append(Platform(level_width, 0, 200, HEIGHT, platform_color))
-    npc = NPC(level_width - 100, HEIGHT - 80, npc_images.get(level_number, npc_images[1]))
     
     current_bg_img = create_tinted_bg(level_number)
-    
     return player, platforms, enemies, spikes, npc, current_bg_img
 
 async def main():
@@ -354,7 +418,6 @@ async def main():
     dialogue_active = False
     dialogue_index = 0
     enter_pressed = False 
-    
     active_touches = {} 
 
     running = True
@@ -367,31 +430,20 @@ async def main():
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1 and restart_button_rect.collidepoint(event.pos):
                     player, platforms, enemies, spikes, npc, current_bg_img = load_level(current_level)
-                    game_over = False
-                    dialogue_active = False
-                    game_won = False
-            # Mobile Multi-touch tracking
+                    game_over = False; dialogue_active = False; game_won = False
             elif event.type == pygame.FINGERDOWN or event.type == pygame.FINGERMOTION:
-                tx = event.x * WIDTH
-                ty = event.y * HEIGHT
+                tx, ty = event.x * WIDTH, event.y * HEIGHT
                 active_touches[event.finger_id] = (tx, ty)
             elif event.type == pygame.FINGERUP:
                 if event.finger_id in active_touches:
                     del active_touches[event.finger_id]
 
         keys = pygame.key.get_pressed()
-        
-        t_left = False
-        t_right = False
-        t_jump = False
-        
+        t_left, t_right, t_jump = False, False, False
         for tx, ty in active_touches.values():
-            if btn_left.collidepoint((tx, ty)):
-                t_left = True
-            if btn_right.collidepoint((tx, ty)):
-                t_right = True
-            if btn_jump.collidepoint((tx, ty)):
-                t_jump = True
+            if btn_left.collidepoint((tx, ty)): t_left = True
+            if btn_right.collidepoint((tx, ty)): t_right = True
+            if btn_jump.collidepoint((tx, ty)): t_jump = True
 
         mouse_pressed = pygame.mouse.get_pressed()[0]
         if mouse_pressed:
@@ -402,9 +454,7 @@ async def main():
 
         if keys[pygame.K_r]:
             player, platforms, enemies, spikes, npc, current_bg_img = load_level(current_level)
-            game_over = False
-            dialogue_active = False
-            game_won = False
+            game_over = False; dialogue_active = False; game_won = False
 
         if (keys[pygame.K_RETURN] or t_jump) and not enter_pressed:
             enter_pressed = True
@@ -412,8 +462,7 @@ async def main():
                 dialogue_index += 1
                 if dialogue_index >= len(level_dialogues.get(current_level, [])):
                     dialogue_active = False
-                    if current_level >= 10:
-                        game_won = True
+                    if current_level >= 10: game_won = True
                     else:
                         current_level += 1
                         player, platforms, enemies, spikes, npc, current_bg_img = load_level(current_level)
@@ -426,32 +475,34 @@ async def main():
 
         if not game_over and not dialogue_active and not game_won:
             fell_out = player.update(keys, platforms, t_left, t_right, t_jump)
-            if fell_out:
-                game_over = True
+            if fell_out: game_over = True
                 
+            for platform in platforms:
+                platform.update(player)
+                
+            for spike in spikes:
+                spike.update(player)
+                if spike.active and player.rect.colliderect(spike.rect):
+                    game_over = True
+                    
             for enemy in enemies:
                 enemy.update()
                 if player.rect.colliderect(enemy.rect):
                     game_over = True
-                    
-            for spike in spikes:
-                if player.rect.colliderect(spike.rect):
-                    game_over = True
 
+            npc.update(player)
             if player.rect.colliderect(npc.rect):
                 dialogue_active = True
                 dialogue_index = 0
 
             camera_x = player.rect.x - (WIDTH // 2) + (player.rect.width // 2)
-            if camera_x < 0:
-                camera_x = 0
+            if camera_x < 0: camera_x = 0
                 
         else:
             if game_over and (keys[pygame.K_r] or t_jump):
                 player, platforms, enemies, spikes, npc, current_bg_img = load_level(current_level)
                 game_over = False
 
-        # Draw seamlessly tiled and tinted background
         parallax_factor = 0.5
         bg_x = -(camera_x * parallax_factor) % WIDTH
         screen.blit(current_bg_img, (bg_x, 0))
@@ -461,15 +512,9 @@ async def main():
         screen.blit(lvl_text, (10, 10))
         screen.blit(restart_icon_img, restart_button_rect.topleft)
         
-        for platform in platforms:
-            platform.draw(screen, camera_x)
-            
-        for spike in spikes:
-            spike.draw(screen, camera_x)
-            
-        for enemy in enemies:
-            enemy.draw(screen, camera_x)
-            
+        for platform in platforms: platform.draw(screen, camera_x)
+        for spike in spikes: spike.draw(screen, camera_x)
+        for enemy in enemies: enemy.draw(screen, camera_x)
         npc.draw(screen, camera_x)
         player.draw(screen, camera_x)
 
@@ -481,8 +526,7 @@ async def main():
             box_w = WIDTH - 200
             box_x = (WIDTH - box_w) // 2
             box_surface = pygame.Surface((box_w, 120))
-            box_surface.set_alpha(200)
-            box_surface.fill(BLACK)
+            box_surface.set_alpha(200); box_surface.fill(BLACK)
             screen.blit(box_surface, (box_x, HEIGHT - 150))
             pygame.draw.rect(screen, WHITE, (box_x, HEIGHT - 150, box_w, 120), 3)
             
@@ -491,10 +535,8 @@ async def main():
                 current_line = lines[dialogue_index]
                 text_rect = pygame.Rect(box_x + 20, HEIGHT - 130, box_w - 40, 100)
                 draw_text_wrapped(screen, current_line, dialogue_font, WHITE, text_rect)
-                
                 prompt = dialogue_font.render("Press JUMP to continue...", True, (200, 200, 200))
-                prompt_rect = prompt.get_rect()
-                prompt_rect.bottomright = (box_x + box_w - 15, HEIGHT - 45)
+                prompt_rect = prompt.get_rect(); prompt_rect.bottomright = (box_x + box_w - 15, HEIGHT - 45)
                 screen.blit(prompt, prompt_rect)
                 
         elif game_won:
@@ -502,12 +544,10 @@ async def main():
             text_rect = text.get_rect(center=(WIDTH/2, HEIGHT/2))
             screen.blit(text, text_rect)
             
-        # Draw Touch Controls with high visibility
         s = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
         pygame.draw.rect(s, (255, 255, 255, 120), btn_left, border_radius=10)
         pygame.draw.rect(s, (255, 255, 255, 120), btn_right, border_radius=10)
         pygame.draw.rect(s, (255, 255, 255, 120), btn_jump, border_radius=10)
-        
         left_text = font.render("<", True, BLACK)
         s.blit(left_text, left_text.get_rect(center=btn_left.center))
         right_text = font.render(">", True, BLACK)
