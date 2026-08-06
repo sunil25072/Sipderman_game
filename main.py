@@ -316,10 +316,6 @@ def load_level(level_number):
     platform_color = get_platform_color(level_number)
     level_width = 2000 + (level_number * 100)
 
-    # ----------------------------------------------------
-    # PERFECTLY TUNED LEVEL LAYOUTS (NO IMPOSSIBLE JUMPS)
-    # ----------------------------------------------------
-
     if level_number == 1:
         platforms.append(Platform(0, HEIGHT - 40, 300, 40, platform_color))
         spikes.append(FallingSpike(200, 100))
@@ -364,26 +360,38 @@ def load_level(level_number):
         enemies.append(Enemy(900, HEIGHT - 80, 100, ENEMY_SPEED * 2))
         spikes.append(InvisibleSpike(1100, HEIGHT - 80))
         
+    # === NEW HARDER LEVELS 7, 8, 9 ===
+    
     elif level_number == 7:
         platforms.append(Platform(0, HEIGHT - 40, 300, 40, platform_color))
-        platforms.append(TrollPlatform(300, HEIGHT - 40, 100, 40, platform_color))
-        platforms.append(Platform(450, HEIGHT - 40, 2000, 40, platform_color))
-        spikes.append(FallingSpike(600, 100))
-        spikes.append(InvisibleSpike(900, HEIGHT - 80))
+        platforms.append(TrollPlatform(300, HEIGHT - 40, 100, 40, platform_color)) 
+        platforms.append(Platform(450, HEIGHT - 40, 200, 40, platform_color))
+        spikes.append(FallingSpike(550, 100))
+        platforms.append(TrollPlatform(650, HEIGHT - 40, 100, 40, platform_color))
+        platforms.append(Platform(800, HEIGHT - 40, 2000, 40, platform_color))
+        spikes.append(InvisibleSpike(950, HEIGHT - 80))
         
     elif level_number == 8:
         platforms.append(Platform(0, HEIGHT - 40, 200, 40, platform_color))
         platforms.append(InvisiblePlatform(350, HEIGHT - 100, 100, 20, platform_color))
-        platforms.append(TrollPlatform(600, HEIGHT - 150, 100, 20, platform_color))
-        platforms.append(Platform(700, HEIGHT - 40, 2000, 40, platform_color))
+        spikes.append(FallingSpike(400, 50)) 
+        platforms.append(InvisiblePlatform(600, HEIGHT - 150, 100, 20, platform_color))
+        platforms.append(TrollPlatform(800, HEIGHT - 150, 100, 20, platform_color)) 
+        platforms.append(Platform(900, HEIGHT - 40, 2000, 40, platform_color))
         spikes.append(InvisibleSpike(1100, HEIGHT - 80))
+        enemies.append(Enemy(1300, HEIGHT - 80, 200, ENEMY_SPEED * 3))
         
     elif level_number == 9:
-        platforms.append(Platform(0, HEIGHT - 40, 400, 40, platform_color))
-        spikes.append(InvisibleSpike(250, HEIGHT - 80))
-        platforms.append(TrollPlatform(400, HEIGHT - 40, 100, 40, platform_color))
-        platforms.append(Platform(550, HEIGHT - 40, 2000, 40, platform_color))
-        spikes.append(FallingSpike(900, 100))
+        platforms.append(Platform(0, HEIGHT - 40, 300, 40, platform_color))
+        spikes.append(InvisibleSpike(150, HEIGHT - 80))
+        platforms.append(TrollPlatform(300, HEIGHT - 40, 100, 40, platform_color))
+        platforms.append(Platform(450, HEIGHT - 40, 200, 40, platform_color))
+        spikes.append(FallingSpike(550, 100))
+        spikes.append(FallingSpike(650, 100))
+        platforms.append(TrollPlatform(750, HEIGHT - 40, 100, 40, platform_color))
+        platforms.append(Platform(900, HEIGHT - 40, 2000, 40, platform_color))
+        spikes.append(InvisibleSpike(1000, HEIGHT - 80))
+        enemies.append(Enemy(1200, HEIGHT - 80, 200, ENEMY_SPEED * 4))
         
     else:
         platforms.append(Platform(0, HEIGHT - 40, 3000, 40, platform_color))
